@@ -1,13 +1,19 @@
+import logging
+
 import random
 from collections import deque
 from typing import Tuple
 
 import numpy as np
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from src.genetic_car.plots import replay_run
+from genetic_car.plots import replay_run
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
 
 # Force CUDA initialization by performing a dummy operation
 _ = torch.randn(1).cuda()
@@ -27,9 +33,7 @@ class DQN(nn.Module):
         )
 
     def forward(self, x):
-        # Scale outputs to map -100 and +100 to near 1
         raw_output = self.fc(x)
-        # scaled_output = torch.sigmoid(raw_output / 100)  # Scale by 100
         return raw_output
 
 
@@ -67,7 +71,6 @@ class DQNAgent:
         probs = probs ** alpha
         probs /= probs.sum()
         batch = random.choices(self.memory, k=batch_size, weights=probs)
-
 
         return batch
 
@@ -108,12 +111,13 @@ class CarEnvironment:
         self.car.reset()
         return self.get_state()
 
-    def get_state(self):
-        distances = [
-            np.linalg.norm([p.x - self.car.x, p.y - self.car.y])
-            for p in self.car.crash_points
-        ]
-        inputs = np.array(distances, dtype=np.float32)
+    def get_state(self) -> np.ndarray:
+        distances = []
+        for p in self.car.crash_points:
+            diff_x = p.x - self.car.x
+            diff_y = p.y - self.car.y
+            distances.append(np.linalg.norm(np.asarray([diff_x, diff_y])))
+        inputs = np.array(distances + [self.car.speed, self.car.direction], dtype=np.float32)
         return inputs
 
     def step(self, action, step_num: int) -> Tuple[np.ndarray, float, bool, dict]:
@@ -125,33 +129,20 @@ class CarEnvironment:
         next_progress = car.progress_on_track()
 
         done = False
-        # if next_progress < prev_progress:
-        #     print("Going backwards")
-        #     reward = -100 - (1 - next_progress) * 100
-        #     done = True
-        if False:
-            return 0
-        elif next_progress < prev_progress:
+        if next_progress < prev_progress:
+            print("Going backwards")
             reward = -100
-        elif next_progress > 0.9 and prev_progress < 0.1:
-            print("Crossed the finish line the wrong way")
-            reward = -1001 - next_progress
-            done = True
-        # elif abs(direction_offset) > self.car.max_turn_angle:
-        #     print("Oversteering")
-        #     reward = -100 - abs(direction_offset)
-        #     done = True
         elif self.car.is_crashed():
             print("Crashed")
-            reward = -100
+            reward = 0
             done = True
-        elif next_progress == 1:
-            print("Crossed the finish line")
+        elif prev_progress < 1 and next_progress == 1:
+            print("Crossed the finish line the right way")
             reward = 10000
             done = True
         else:
             distance_from_start = calc_distance(self.car.position, self.car.starting_point)
-            reward = ((next_progress - prev_progress) + 1) * 100
+            reward = distance_from_start
         info = {
             "progress": next_progress,
             "direction_offset": direction_offset,
@@ -162,7 +153,8 @@ class CarEnvironment:
 
 
 # Training Loop
-def train_dqn(car, episodes=1000, max_steps=1500, batch_size=64):
+def train_dqn(car:Car,  episodes=1000, max_steps=1500, batch_size=64):
+    log.info("Training DQN")
     env = CarEnvironment(car)
     state_dim = len(env.get_state())
     agent = DQNAgent(state_dim, env.action_dim)
@@ -221,9 +213,9 @@ def train_dqn(car, episodes=1000, max_steps=1500, batch_size=64):
 
 
 if __name__ == "__main__":
-    from src.genetic_car.track import Track
-    from src.genetic_car.helpers import Point, calc_distance
-    from src.genetic_car.car import Car
+    from genetic_car.track import Track
+    from genetic_car.helpers import Point, calc_distance
+    from genetic_car.car import Car
     import cv2
     import time
     from pathlib import Path
@@ -238,8 +230,6 @@ if __name__ == "__main__":
     view_angles = list(np.arange(-90, 91, 30))
 
     start_direction = track.direction_at_point(start_point)
-    print(start_direction)
-    print(start_point)
     car = Car(track=track,
               starting_point=Point(*start_point),
               view_angles=view_angles,

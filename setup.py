@@ -17,7 +17,7 @@ dependency_links = [
 ]
 
 setup(
-    name='your_project_name',
+    name='genetic_car',
     version='0.1.0',
     packages=find_packages(where='src'),
     package_dir={'': 'src'},
@@ -28,5 +28,5 @@ setup(
     dependency_links=dependency_links,
     author='Rudra Menon',
     description='A genetic algorithm for training a self-driving car',
-    python_requires='>=3.10',
+    python_requires='>=3.9',
 )

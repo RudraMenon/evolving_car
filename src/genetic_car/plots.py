@@ -5,11 +5,11 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.genetic_car.helpers import Point
+from genetic_car.helpers import Point
 
 if TYPE_CHECKING:
-    from src.genetic_car.car import Car
-    from src.genetic_car.track import Track
+    from genetic_car.car import Car
+    from genetic_car.track import Track
 
 
 # Track plotting functions

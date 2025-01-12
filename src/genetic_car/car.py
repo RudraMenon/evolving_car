@@ -6,9 +6,9 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.genetic_car.helpers import Point
-from src.genetic_car.plots import draw_car
-from src.genetic_car.track import Track
+from genetic_car.helpers import Point
+from genetic_car.plots import draw_car
+from genetic_car.track import Track
 
 
 def bresenhams_line_algorithm(start: tuple, direction: float, image, max_length):

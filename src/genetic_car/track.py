@@ -4,7 +4,11 @@ from scipy.spatial import KDTree
 from skimage.measure import label, regionprops
 from skimage.morphology import skeletonize
 
-from src.genetic_car.plots import draw_track
+from genetic_car.plots import draw_track
+import logging
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
 
 
 def find_center_path(track):
@@ -85,9 +89,11 @@ def order_skeleton_points(points, start_index=0) -> np.ndarray:
 
 class Track:
     def __init__(self, image: np.ndarray) -> None:
+        log.info("loading track...")
         self.image = image
         self.image = cv2.dilate(self.image, np.ones((15, 15), np.uint8), iterations=1)
         self.center_path = find_center_path(self.image)
+        log.info("track loaded")
 
     def get_progress(self, point: tuple) -> float:
         closest_point_index = self.get_closest_point_index(point)
@@ -95,6 +101,7 @@ class Track:
         return progress
 
     def set_start_point(self, point: tuple) -> None:
+        log.info("setting start point to %s", point)
         closest_point_index = self.get_closest_point_index(point) - 1
         if closest_point_index < 0:
             closest_point_index = len(self.center_path) - 1
